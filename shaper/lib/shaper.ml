@@ -4,12 +4,14 @@ module Lexer = Lexer
 type shape =
   [ `id of string
   | `int of int
-  | `sym of string
-  | `block of block * shape
-  | `prefix of string * shape
-  | `infix of string * shape * shape
-  | `postfix of string * shape
-  | `seq of sep * shape list ]
+  | `op of string
+  | `parens of shape
+  | `brackets of shape
+  | `braces of shape
+  | `prefix of shape * shape
+  | `infix of shape * shape * shape
+  | `postfix of shape * shape
+  | `comma of shape list
+  | `braces of shape list
+  | `seq of shape list ]
 
-and block = [ `parens | `brackets | `braces ]
-and sep = [ `sp | `semi | `comma ]
