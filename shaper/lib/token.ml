@@ -1,11 +1,17 @@
-type space = Left | Right | Same
 
 type t =
+  | Id of string
+  | Op of string
   | Int of int
   | String of string
-  | Id of string
-  | Delim of string
-  | Op of string
+  | Lparen
+  | Rparen
+  | Lbrace
+  | Rbrace
+  | Lbracket
+  | Rbracket
+  | Comma
+  | Semi
   | Eof
 
 let pp =
@@ -13,7 +19,14 @@ let pp =
   fun f token ->
     match token with
     | Id x -> pf f "%s" x
-    | Delim x -> pf f "%s" x
+    | Lparen -> pf f "(" 
+    | Rparen -> pf f ")"
+    | Lbrace -> pf f "{"
+    | Rbrace -> pf f "}" 
+    | Lbracket -> pf f "[" 
+    | Rbracket -> pf f "]" 
+    | Comma -> pf f "," 
+    | Semi -> pf f ";" 
     | String x -> pf f "%S" x
     | Int x -> pf f "%d" x
     | Op x -> pf f "%s" x

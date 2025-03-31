@@ -1,11 +1,17 @@
-type space = Left | Right | Same
 
 type t =
+  | Id of string
+  | Op of string
   | Int of int
   | String of string
-  | Id of string
-  | Delim of string
-  | Op of string
+  | Lparen
+  | Rparen
+  | Lbrace
+  | Rbrace
+  | Lbracket
+  | Rbracket
+  | Comma
+  | Semi
   | Eof
 
 val pp : Format.formatter -> t -> unit

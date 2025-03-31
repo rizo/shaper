@@ -1,0 +1,2 @@
+export PATH="_build/_private/default/.dev-tool/ocaml-lsp-server/ocaml-lsp-server/target/bin:$PATH"
+export PATH="_build/_private/default/.dev-tool/ocamlformat/ocamlformat/target/bin:$PATH"

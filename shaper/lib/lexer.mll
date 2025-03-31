@@ -45,19 +45,19 @@ rule read lexer = parse
   | "//"[^'\n']* { read lexer lexbuf }
   | ident_lower { Token.Id (Lexing.lexeme lexbuf) }
   | ident_upper { Token.Id (Lexing.lexeme lexbuf) }
-  | sym { Token.Op (Lexing.lexeme lexbuf, Token.Same) }
+  | sym { Token.Op (Lexing.lexeme lexbuf) }
   | int { Token.Int (int_of_string (Lexing.lexeme lexbuf)) }
-  | '\\' { Token.Op ("\\", Token.Same) }
-  | '{' { Token.Delim "{" }
-  | '}' { Token.Delim "}" }
-  | '(' { Token.Delim "(" }
-  | ')' { Token.Delim ")" }
-  | '[' { Token.Delim "[" }
-  | ']' { Token.Delim "]" }
-  | ',' { Token.Delim "," }
-  | ';' { Token.Delim ";" }
-  | '`' { Delim "`" }
-  | '\'' { Delim "'" }
+  | '\\' { Token.Op ("\\") }
+  | '{' { Token.Lbrace }
+  | '}' { Token.Rbrace }
+  | '(' { Token.Lparen }
+  | ')' { Token.Rparen }
+  | '[' { Token.Lbracket }
+  | ']' { Token.Rbracket }
+  | ',' { Token.Comma }
+  | ';' { Token.Semi }
+  (*| '`' { Delim "`" }*)
+  (*| '\'' { Delim "'" }*)
   | '"' {
     Buffer.clear lexer.strbuf;
     String (finish_string lexer lexbuf)
