@@ -14,10 +14,17 @@
 
 (expanded_solver_variable_bindings
  (variable_values
+  (with-doc false)
   (with-dev-setup false)
   (post true)
-  (os-distribution homebrew)
-  (os macos)
+  (os-distribution nixos)
+  (os linux)
   (opam-version 2.2.0~alpha-vendored)
-  (arch arm64))
- (unset_variables with-test sys-ocaml-version sys-ocaml-libc build))
+  (arch x86_64))
+ (unset_variables
+  with-test
+  sys-ocaml-version
+  sys-ocaml-libc
+  enable-ocaml-beta-repository
+  dev
+  build))
