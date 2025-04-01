@@ -1,4 +1,3 @@
-
 type t =
   | Id of string
   | Op of string
@@ -10,6 +9,7 @@ type t =
   | Rbrace
   | Lbracket
   | Rbracket
+  | Label of string
   | Comma
   | Semi
   | Eof
@@ -19,14 +19,15 @@ let pp =
   fun f token ->
     match token with
     | Id x -> pf f "%s" x
-    | Lparen -> pf f "(" 
+    | Lparen -> pf f "("
     | Rparen -> pf f ")"
     | Lbrace -> pf f "{"
-    | Rbrace -> pf f "}" 
-    | Lbracket -> pf f "[" 
-    | Rbracket -> pf f "]" 
-    | Comma -> pf f "," 
-    | Semi -> pf f ";" 
+    | Rbrace -> pf f "}"
+    | Lbracket -> pf f "["
+    | Rbracket -> pf f "]"
+    | Label x -> pf f "%s:" x
+    | Comma -> pf f ","
+    | Semi -> pf f ";"
     | String x -> pf f "%S" x
     | Int x -> pf f "%d" x
     | Op x -> pf f "%s" x
@@ -34,7 +35,5 @@ let pp =
 
 let eq t1 t2 = Stdlib.( = ) t1 t2
 let cmp = Stdlib.compare
-
-let is_eof = function
-  | Eof -> true
-  | _ -> false
+let is_eof = function Eof -> true | _ -> false
+let is_label = function Label _ -> true | _ -> false

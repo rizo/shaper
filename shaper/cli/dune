@@ -1,0 +1,4 @@
+(executable
+ (public_name shaper)
+ (name main)
+ (libraries shaper))

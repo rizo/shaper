@@ -5,7 +5,7 @@
     - t for token
 
 
-   Precedence:
+   power:
    - delimiter = 1, to allow lbp(1) > rbp(0) and trigger invalid infix
 *)
 
@@ -34,26 +34,26 @@ let unbalanced ~ctx t = Error { reason = Unbalanced t; ctx }
 let error_to_string err =
   match err.reason with
   | Unexpected { expected = Some t1; actual = Some t2 } ->
-    Fmt.str "%s: invalid syntax: expected '%a' but got '%a'" err.ctx Token.pp t1
-      Token.pp t2
+      Fmt.str "%s: invalid syntax: expected '%a' but got '%a'" err.ctx Token.pp
+        t1 Token.pp t2
   | Unexpected { expected = Some t; actual = None } ->
-    Fmt.str "%s: invalid syntax: end of file while expecting '%a'" err.ctx
-      Token.pp t
+      Fmt.str "%s: invalid syntax: end of file while expecting '%a'" err.ctx
+        Token.pp t
   | Unexpected { expected = None; actual = None } ->
-    Fmt.str "%s: invalid syntax: unexpected end of file" err.ctx
+      Fmt.str "%s: invalid syntax: unexpected end of file" err.ctx
   | Unexpected { expected = None; actual = Some t } ->
-    Fmt.str "%s: invalid syntax: unexpected token '%a'" err.ctx Token.pp t
+      Fmt.str "%s: invalid syntax: unexpected token '%a'" err.ctx Token.pp t
   | Invalid_infix token ->
-    Fmt.str "%s: invalid syntax: '%a' cannot be used in infix postion" err.ctx
-      Token.pp token
+      Fmt.str "%s: invalid syntax: '%a' cannot be used in infix postion" err.ctx
+        Token.pp token
   | Invalid_prefix token ->
-    Fmt.str "%s: invalid syntax: '%a' cannot be used in prefix position" err.ctx
-      Token.pp token
+      Fmt.str "%s: invalid syntax: '%a' cannot be used in prefix position"
+        err.ctx Token.pp token
   | Unbalanced token ->
-    Fmt.str "%s: invalid syntax: unbalanced '%a'" err.ctx Token.pp token
+      Fmt.str "%s: invalid syntax: unbalanced '%a'" err.ctx Token.pp token
   | Zero -> Fmt.str "%s: invalid syntax: empty parser result" err.ctx
   | Halted tok ->
-    Fmt.str "%s: invalid syntax: parser halted at %a" err.ctx Token.pp tok
+      Fmt.str "%s: invalid syntax: parser halted at %a" err.ctx Token.pp tok
 
 (* Parser type *)
 
@@ -86,15 +86,9 @@ module Grammar = struct
 
   let extend ~prefix ~infix g =
     let prefix tok =
-      match prefix tok with
-      | None -> g.prefix tok
-      | some -> some
+      match prefix tok with None -> g.prefix tok | some -> some
     in
-    let infix tok =
-      match infix tok with
-      | None -> g.infix tok
-      | some -> some
-    in
+    let infix tok = match infix tok with None -> g.infix tok | some -> some in
     { g with prefix; infix }
 
   let get_prefix tok g = g.prefix tok
@@ -110,8 +104,8 @@ let consume expected : 'a parser =
   match Lexer.pick l with
   | Eof -> unexpected_end ~ctx:"consume" ~expected ()
   | actual when actual = expected ->
-    Lexer.move l;
-    Ok ()
+      Lexer.move l;
+      Ok ()
   | actual -> unexpected_token ~ctx:"consume" ~expected actual
 
 let rec until pred (p : 'a parser) : 'a list parser =
@@ -140,29 +134,32 @@ let rec parse_infix rbp left g : 'a parser =
     | Some infix -> infix
     | None -> g.default_infix
   in
+  (* Fmt.epr "YYY: tok=%a   \tL=%03d\tR=%03d\t -> %s won!@." Token.pp tok lbp rbp *)
+  (*   (if lbp > rbp then "L" else "R"); *)
   if lbp > rbp then
     let* left' = rule left g l in
     parse_infix rbp left' g l
   else Ok left
 
-let parse ?precedence:(rbp = 0) g : 'a parser =
+let parse ?power:(rbp = 0) g : 'a parser =
  fun l ->
+  (* Fmt.epr "XXX: tok=%a   \tR=%d@." Token.pp (Lexer.pick l) rbp; *)
   let* left = parse_prefix g l in
   parse_infix rbp left g l
 
 let run g l =
   match parse g l with
   | Ok x ->
-    let tok = Lexer.pick l in
-    if Token.is_eof tok then x
-    else failwith (error_to_string { reason = Halted tok; ctx = "run" })
+      let tok = Lexer.pick l in
+      if Token.is_eof tok then x
+      else failwith (error_to_string { reason = Halted tok; ctx = "run" })
   | Error err -> failwith (error_to_string err)
 
 (* Rules *)
 
-let parse_infix_juxt ~precedence f left g l =
+let parse_infix_juxt ~power f left g l =
   let* xs =
-    until (fun tok -> not (Grammar.has_infix tok g)) (parse ~precedence g) l
+    until (fun tok -> not (Grammar.has_infix tok g)) (parse ~power g) l
   in
   Ok (f (left :: xs))
 
@@ -174,10 +171,10 @@ let parse_infix_juxt ~precedence f left g l =
    in
    Ok (f (left :: xs)) *)
 
-(* let parse_infix_juxt' ?precedence f left g l =
+(* let parse_infix_juxt' ?power f left g l =
    let tok = Lexer.pick l in
    if not (Grammar.has_infix tok g || Lexer.is_eof tok) then
-     let* right = parse ?precedence g l in
+     let* right = parse ?power g l in
      let* xs =
        until
          (fun tok -> not (Grammar.has_infix tok g || Lexer.is_eof tok))
@@ -206,26 +203,37 @@ let infix_unbalanced =
   in
   (rule, 0)
 
-let infix_binary precedence tok f =
+let infix_binary power tok f =
   let rule left g l =
     let* () = consume tok l in
-    let* right = parse ~precedence g l in
+    let* right = parse ~power g l in
     Ok (f left right)
   in
-  (rule, precedence)
+  (rule, power)
 
-let infix_right_binary precedence tok f =
+let infix_or_postfix power tok ~infix:mk_infix ~postfix:mk_postfix =
   let rule left g l =
     let* () = consume tok l in
-    let* right = parse ~precedence:(precedence - 1) g l in
+    let tok_right = Lexer.pick l in
+    if Grammar.has_infix tok_right g then Ok (mk_postfix left)
+    else
+      let* right = parse ~power g l in
+      Ok (mk_infix left right)
+  in
+  (rule, power)
+
+let infix_right_binary power tok f =
+  let rule left g l =
+    let* () = consume tok l in
+    let* right = parse ~power:(power - 1) g l in
     Ok (f left right)
   in
-  (rule, precedence)
+  (rule, power)
 
-let prefix_unary ?precedence tok f =
+let prefix_unary ?power tok f =
   let rule g l =
     let* () = consume tok l in
-    let* x = parse ?precedence g l in
+    let* x = parse ?power g l in
     Ok (f x)
   in
   rule
@@ -238,12 +246,12 @@ let const x =
   in
   rule
 
-let postfix_unary precedence tok f =
+let postfix_unary power tok f =
   let rule left _g l =
     let* () = consume tok l in
     Ok (f left)
   in
-  (rule, precedence)
+  (rule, power)
 
 let prefix_invalid =
   let rule tok g _l = invalid_prefix ~ctx:g.name tok in
@@ -275,55 +283,53 @@ let prefix_scope tok1 tok2 f =
   in
   rule
 
-let parse_infix_seq ~sep:(sep, precedence) f left g l =
+let parse_infix_seq ~sep:is_sep ~power f left g l =
   let* xs =
-    until
-      (fun tok -> sep = tok)
+    until is_sep
       (fun l ->
-        let* () = consume sep l in
-        parse ~precedence g l)
+        Lexer.move l;
+        parse ~power g l)
       l
   in
   Ok (f (left :: xs))
 
-let infix_seq ~sep:(sep, precedence) f =
+let infix_seq ~sep:is_sep ~power f =
   let rule left g l =
     let* xs =
-      until
-        (fun tok -> sep = tok)
+      until is_sep
         (fun l ->
-          let* () = consume sep l in
-          parse ~precedence g l)
+          Lexer.move l;
+          parse ~power g l)
         l
     in
     Ok (f (left :: xs))
   in
-  (rule, precedence)
+  (rule, power)
 
-let postfix_seq ~sep:(sep, precedence) f =
+let postfix_seq ~sep:(sep, power) f =
   let rule left g l =
     let* () = consume sep l in
     let* xs =
       until
         (fun tok -> Grammar.has_prefix tok g)
         (fun l ->
-          let* x = parse ~precedence g l in
+          let* x = parse ~power g l in
           let* () = consume sep l in
           Ok x)
         l
     in
     Ok (f (left :: xs))
   in
-  (rule, precedence)
+  (rule, power)
 
 (* Infix seq with optional sep terminator *)
-let infix_seq_opt ~sep:(sep, precedence) f =
+let infix_seq_opt ~sep:(sep, power) f =
   let rule left g l =
     let* () = consume sep l in
     let rec p l =
       let tok = Lexer.pick l in
       if Grammar.has_prefix tok g then
-        let* x = parse ~precedence g l in
+        let* x = parse ~power g l in
         let tok = Lexer.pick l in
         if Token.eq tok sep then
           let* () = consume sep l in
@@ -335,11 +341,11 @@ let infix_seq_opt ~sep:(sep, precedence) f =
     let* xs = p l in
     Ok (f (left :: xs))
   in
-  (rule, precedence)
+  (rule, power)
 
-let prefix_seq ~sep:(sep, precedence) f g l =
-  let* () = consume sep l in
-  let* left = parse ~precedence g l in
-  parse_infix_seq ~sep:(sep, precedence) f left g l
+let prefix_seq ~sep ~power f g l =
+  Lexer.move l;
+  let* left = parse ~power g l in
+  parse_infix_seq ~sep ~power f left g l
 
 let eof = ((fun left _g _l -> Ok left), 0)

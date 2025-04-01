@@ -32,9 +32,9 @@ let ident_inner_char = ['A'-'Z' 'a'-'z' '_' '\'' '0'-'9']
 let ident_upper = (ident_upper_char) ident_inner_char*
 let ident_lower = (ident_lower_char) ident_inner_char*
 
-let sym_char =
+let op_char =
   ['!' '$' '%' '#' '&' '*' '+' '-' '.' '/' ':' '<' '=' '>' '?' '@' '^' '|' '~']
-let sym = sym_char+
+let op = op_char+
 
 let space = [' ' '\t' '\r']+
 let digit = ['0'-'9']
@@ -43,10 +43,6 @@ let int = (digit | nonzero digit+)
 
 rule read lexer = parse
   | "//"[^'\n']* { read lexer lexbuf }
-  | ident_lower { Token.Id (Lexing.lexeme lexbuf) }
-  | ident_upper { Token.Id (Lexing.lexeme lexbuf) }
-  | sym { Token.Op (Lexing.lexeme lexbuf) }
-  | int { Token.Int (int_of_string (Lexing.lexeme lexbuf)) }
   | '\\' { Token.Op ("\\") }
   | '{' { Token.Lbrace }
   | '}' { Token.Rbrace }
@@ -66,6 +62,11 @@ rule read lexer = parse
     update_loc lexbuf None 1 false 0;
     read lexer lexbuf
   }
+  | (ident_lower as x) ':' { Token.Label x }
+  | ident_lower { Token.Id (Lexing.lexeme lexbuf) }
+  | ident_upper { Token.Id (Lexing.lexeme lexbuf) }
+  | op { Token.Op (Lexing.lexeme lexbuf) }
+  | int { Token.Int (int_of_string (Lexing.lexeme lexbuf)) }
   | space { read lexer lexbuf }
   | eof { Eof }
   | _ { Fmt.failwith "Invalid token: %s" (Lexing.lexeme lexbuf) }
