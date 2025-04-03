@@ -91,12 +91,10 @@
   $ shaper <<< 'a + f 1: t'
   (infix : (infix + a (_ f 1)) t)
 
-  $ shaper <<< 'a + f 1: t : t2'
-  (infix : (infix + a (_ f 1)) t)
+  $ shaper <<< 'a + f 1 : t1 : t2'
+  (infix : (infix + a (_ f 1)) (infix : t1 t2))
  
   $ shaper <<< 'select: a from: c where: b and: x'
 
-#  $ shaper <<< 'select: (a, b) from: c where: a > 1 and: (b not: null)'
-
-#  $ shaper <<< 'a: 1 + b: 2'
-#  (prefix (: a) (infix + 1 (prefix (: b) 2)))
+  $ shaper <<< 'a: 1 + b: 2'
+  (infix : a (infix : (infix + 1 b) 2))
