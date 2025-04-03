@@ -9,7 +9,6 @@ type t =
   | Rbrace
   | Lbracket
   | Rbracket
-  | Label of string
   | Comma
   | Semi
   | Eof
@@ -25,7 +24,6 @@ let pp =
     | Rbrace -> pf f "}"
     | Lbracket -> pf f "["
     | Rbracket -> pf f "]"
-    | Label x -> pf f "%s:" x
     | Comma -> pf f ","
     | Semi -> pf f ";"
     | String x -> pf f "%S" x
@@ -36,4 +34,3 @@ let pp =
 let eq t1 t2 = Stdlib.( = ) t1 t2
 let cmp = Stdlib.compare
 let is_eof = function Eof -> true | _ -> false
-let is_label = function Label _ -> true | _ -> false

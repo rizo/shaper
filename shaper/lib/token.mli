@@ -9,7 +9,6 @@ type t =
   | Rbrace
   | Lbracket
   | Rbracket
-  | Label of string
   | Comma
   | Semi
   | Eof
@@ -18,4 +17,3 @@ val pp : Format.formatter -> t -> unit
 val cmp : t -> t -> int
 val eq : t -> t -> bool
 val is_eof : t -> bool
-val is_label : t -> bool

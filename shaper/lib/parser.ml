@@ -58,17 +58,17 @@ end
 module Power = struct
   let semi = 10
   let comma = 20
-  let label = 25
+  let colon = 25
 
   (* TODO left/right *)
   let get str =
     match str with
     | "=" -> 30
     | "|" -> 40
+    | ":" -> 50
     | "::" -> 55
     | "->" -> 60
     | "!" -> 60
-    | "." -> 60
     | _ -> (
         match str.[0] with
         | '=' -> 101
@@ -80,7 +80,6 @@ module Power = struct
         | _ -> 100)
 
   let juxt = 300
-  let postfix_tight = 305 (* f x a.b.c! -> (f x ((a.b.c) !)) *)
   let dot = 310
 end
 
@@ -94,14 +93,6 @@ let prefix (tok : Token.t) =
   | Lparen -> Some (P.between Lparen Rparen Shape.parens)
   | Lbrace -> Some (P.between Lbrace Rbrace Shape.braces)
   | Lbracket -> Some (P.between Lbracket Rbracket Shape.brackets)
-  | Label lbl ->
-      let rule g l =
-        Lexer.move l;
-        let* right = P.parse ~power:Power.label g l in
-        let lbl_shape = Shape.label lbl right in
-        Ok lbl_shape
-      in
-      Some rule
   | _ -> None
 
 let infix (tok : Token.t) =
@@ -110,25 +101,7 @@ let infix (tok : Token.t) =
   | Semi -> Some (P.infix_seq_opt ~sep:(tok, Power.semi) Shape.semi)
   | Comma ->
       Some (P.infix_seq ~sep:(Token.eq tok) ~power:Power.comma Shape.comma)
-  | Label lbl ->
-      let rule left g l =
-        Lexer.move l;
-        let* right = P.parse ~power:Power.postfix_tight g l in
-        let lbl_shape = Shape.label lbl right in
-        let out =
-          match left with
-          | `seq xs -> Shape.seq (xs @ [ lbl_shape ])
-          | _ -> Shape.seq [ left; lbl_shape ]
-        in
-        Ok out
-      in
-      Some (rule, Power.postfix_tight)
-  | Op ":" ->
-      let rule left _g l =
-        let* () = P.consume tok l in
-        Ok (Shape.postfix ":" left)
-      in
-      Some (rule, Power.postfix_tight)
+  | Op ":" -> Some (P.infix_right_binary 50 tok (Shape.infix ":"))
   | Op x ->
       let prec = Power.get x in
       Some

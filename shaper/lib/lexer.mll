@@ -62,7 +62,6 @@ rule read lexer = parse
     update_loc lexbuf None 1 false 0;
     read lexer lexbuf
   }
-  | (ident_lower as x) ':' { Token.Label x }
   | ident_lower { Token.Id (Lexing.lexeme lexbuf) }
   | ident_upper { Token.Id (Lexing.lexeme lexbuf) }
   | op { Token.Op (Lexing.lexeme lexbuf) }
