@@ -24,3 +24,6 @@ type loc = { l_start : int; c_start : int; l_end : int; c_end : int }
 
 val loc : t -> loc
 (* The location of the current token. *)
+
+val pp_loc : Format.formatter -> loc -> unit
+(* Print the loc value. *)

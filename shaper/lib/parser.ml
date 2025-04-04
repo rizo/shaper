@@ -8,6 +8,7 @@ module Shape = struct
     | `op of string
     | `int of int
     | `str of string
+    | `char of char
     | `parens of t
     | `brackets of t
     | `braces of t
@@ -24,6 +25,7 @@ module Shape = struct
   let op x : t = `op x
   let int x : t = `int x
   let str x : t = `str x
+  let char x : t = `char x
   let parens x : t = `parens x
   let brackets x : t = `brackets x
   let braces x : t = `braces x
@@ -42,12 +44,14 @@ module Shape = struct
     | `op x -> Fmt.pf f "%s" x
     | `int x -> Fmt.pf f "%d" x
     | `str x -> Fmt.pf f "%S" x
-    | `parens x -> Fmt.pf f "(parens @[<hv1>%a@])" pp x
-    | `brackets x -> Fmt.pf f "(brackets @[<hv1>%a@])" pp x
-    | `braces x -> Fmt.pf f "(braces @[<hv1>%a@])" pp x
-    | `prefix (fix, x) -> Fmt.pf f "(prefix %s %a)" fix pp x
-    | `infix (fix, x, y) -> Fmt.pf f "(infix %s %a %a)" fix pp x pp y
-    | `postfix (fix, x) -> Fmt.pf f "(postfix %s %a)" fix pp x
+    | `char x -> Fmt.pf f "%c" x
+    | `parens x -> Fmt.pf f "@[<hv2>(parens@ %a@])" pp x
+    | `brackets x -> Fmt.pf f "@[<hv2>(brackets@ %a@])" pp x
+    | `braces x -> Fmt.pf f "@[<hv2>(braces@ %a@])" pp x
+    | `prefix (fix, x) -> Fmt.pf f "@[<hv2>(prefix@ %s@ %a)@]" fix pp x
+    | `infix (fix, x, y) ->
+        Fmt.pf f "@[<hv2>(infix@ %s@ %a@ %a)@]" fix pp x pp y
+    | `postfix (fix, x) -> Fmt.pf f "@[<hv2>(postfix@ %s@ %a)@]" fix pp x
     | `colon (x, y) -> Fmt.pf f "(: %a %a)" pp x pp y
     | `label (x, y) -> Fmt.pf f "(%s: %a)" x pp y
     | `comma xs -> Fmt.pf f "(, @[%a@])" (Fmt.list ~sep:Fmt.sp pp) xs
@@ -104,6 +108,8 @@ let ( let* ) = Result.bind
 let prefix (tok : Token.t) =
   match tok with
   | Int x -> Some (P.const (Shape.int x))
+  | Str x -> Some (P.const (Shape.str x))
+  | Char x -> Some (P.const (Shape.char x))
   | Id x -> Some (P.const (Shape.id x))
   | Op x -> Some (P.prefix_unary tok (fun shape -> Shape.prefix x shape))
   | Lparen -> Some (P.between Lparen Rparen Shape.parens)

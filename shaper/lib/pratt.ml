@@ -19,41 +19,47 @@ type reason =
   | Zero
   | Halted of Token.t
 
-type error = { reason : reason; ctx : string }
+type error = { reason : reason; ctx : string; loc : Lexer.loc option }
 
 let unexpected_token ~ctx ?expected actual =
-  Error { reason = Unexpected { expected; actual = Some actual }; ctx }
+  Error
+    { reason = Unexpected { expected; actual = Some actual }; ctx; loc = None }
 
 let unexpected_end ~ctx ?expected () =
-  Error { reason = Unexpected { expected; actual = None }; ctx }
+  Error { reason = Unexpected { expected; actual = None }; ctx; loc = None }
 
-let invalid_prefix ~ctx t = Error { reason = Invalid_prefix t; ctx }
-let invalid_infix ~ctx t = Error { reason = Invalid_infix t; ctx }
-let unbalanced ~ctx t = Error { reason = Unbalanced t; ctx }
+let invalid_prefix ?loc ~ctx t = Error { reason = Invalid_prefix t; ctx; loc }
+let invalid_infix ?loc ~ctx t = Error { reason = Invalid_infix t; ctx; loc }
+let unbalanced ~ctx t = Error { reason = Unbalanced t; ctx; loc = None }
 
 let error_to_string err =
+  let pre =
+    match err.loc with
+    | None -> err.ctx
+    | Some loc -> Fmt.str "%a: %s" Lexer.pp_loc loc err.ctx
+  in
   match err.reason with
   | Unexpected { expected = Some t1; actual = Some t2 } ->
-      Fmt.str "%s: invalid syntax: expected '%a' but got '%a'" err.ctx Token.pp
-        t1 Token.pp t2
+      Fmt.str "%s: invalid syntax: expected '%a' but got '%a'" pre Token.pp t1
+        Token.pp t2
   | Unexpected { expected = Some t; actual = None } ->
-      Fmt.str "%s: invalid syntax: end of file while expecting '%a'" err.ctx
+      Fmt.str "%s: invalid syntax: end of file while expecting '%a'" pre
         Token.pp t
   | Unexpected { expected = None; actual = None } ->
-      Fmt.str "%s: invalid syntax: unexpected end of file" err.ctx
+      Fmt.str "%s: invalid syntax: unexpected end of file" pre
   | Unexpected { expected = None; actual = Some t } ->
-      Fmt.str "%s: invalid syntax: unexpected token '%a'" err.ctx Token.pp t
+      Fmt.str "%s: invalid syntax: unexpected token '%a'" pre Token.pp t
   | Invalid_infix token ->
-      Fmt.str "%s: invalid syntax: '%a' cannot be used in infix postion" err.ctx
+      Fmt.str "%s: invalid syntax: '%a' cannot be used in infix postion" pre
         Token.pp token
   | Invalid_prefix token ->
-      Fmt.str "%s: invalid syntax: '%a' cannot be used in prefix position"
-        err.ctx Token.pp token
+      Fmt.str "%s: invalid syntax: '%a' cannot be used in prefix position" pre
+        Token.pp token
   | Unbalanced token ->
-      Fmt.str "%s: invalid syntax: unbalanced '%a'" err.ctx Token.pp token
-  | Zero -> Fmt.str "%s: invalid syntax: empty parser result" err.ctx
+      Fmt.str "%s: invalid syntax: unbalanced '%a'" pre Token.pp token
+  | Zero -> Fmt.str "%s: invalid syntax: empty parser result" pre
   | Halted tok ->
-      Fmt.str "%s: invalid syntax: parser halted at %a" err.ctx Token.pp tok
+      Fmt.str "%s: invalid syntax: parser halted at %a" pre Token.pp tok
 
 (* Parser type *)
 
@@ -70,13 +76,15 @@ type 'a grammar = {
 module Grammar = struct
   let default_prefix_err g l =
     let tok = Lexer.pick l in
-    invalid_prefix ~ctx:g.name tok
+    let loc = Lexer.loc l in
+    invalid_prefix ~loc ~ctx:g.name tok
 
   let default_infix_err =
     let rule _left g : 'a parser =
      fun l ->
       let tok = Lexer.pick l in
-      invalid_infix ~ctx:g.name tok
+      let loc = Lexer.loc l in
+      invalid_infix ~loc ~ctx:g.name tok
     in
     (rule, 0)
 
@@ -152,7 +160,10 @@ let run g l =
   | Ok x ->
       let tok = Lexer.pick l in
       if Token.is_eof tok then x
-      else failwith (error_to_string { reason = Halted tok; ctx = "run" })
+      else
+        let loc = Lexer.loc l in
+        failwith
+          (error_to_string { reason = Halted tok; ctx = "run"; loc = Some loc })
   | Error err -> failwith (error_to_string err)
 
 (* Rules *)

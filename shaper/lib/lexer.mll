@@ -56,8 +56,9 @@ rule read lexer = parse
   (*| '\'' { Delim "'" }*)
   | '"' {
     Buffer.clear lexer.strbuf;
-    String (finish_string lexer lexbuf)
+    Str (finish_string lexer lexbuf)
   }
+  | '\'' ([^ '\''] as x) '\'' { Token.Char x }
   | "\n" {
     update_loc lexbuf None 1 false 0;
     read lexer lexbuf
@@ -121,4 +122,7 @@ and finish_string lexer = parse
     l_end = lexbuf.Lexing.lex_curr_p.pos_lnum;
     c_end = lexbuf.Lexing.lex_curr_p.pos_cnum;
   }
+
+  let pp_loc f loc =
+    Format.fprintf f "%d:%d" loc.l_start loc.c_start
 }

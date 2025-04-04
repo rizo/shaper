@@ -2,7 +2,8 @@ type t =
   | Id of string
   | Op of string
   | Int of int
-  | String of string
+  | Str of string
+  | Char of char
   | Lparen
   | Rparen
   | Lbrace

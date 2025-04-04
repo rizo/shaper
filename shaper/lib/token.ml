@@ -2,7 +2,8 @@ type t =
   | Id of string
   | Op of string
   | Int of int
-  | String of string
+  | Str of string
+  | Char of char
   | Lparen
   | Rparen
   | Lbrace
@@ -26,7 +27,8 @@ let pp =
     | Rbracket -> pf f "]"
     | Comma -> pf f ","
     | Semi -> pf f ";"
-    | String x -> pf f "%S" x
+    | Str x -> pf f "%S" x
+    | Char x -> pf f "%c" x
     | Int x -> pf f "%d" x
     | Op x -> pf f "%s" x
     | Eof -> pf f "(eof)"
