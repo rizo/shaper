@@ -2,7 +2,7 @@
 
 pkgs.mkShell {
   shellHook = ''
-    export PATH="$PWD/$(dirname $(dune tools which ocamllsp)):$PATH"
-    export PATH="$PWD/$(dirname $(dune tools which ocamlformat)):$PATH"
+    ./scripts/init-dune-locks.sh
+    source ./scripts/load-dune-dev-tools.sh
   '';
 }
