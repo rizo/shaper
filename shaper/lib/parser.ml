@@ -15,8 +15,6 @@ module Shape = struct
     | `prefix of string * t
     | `infix of string * t * t
     | `postfix of string * t
-    | `colon of t * t
-    | `label of string * t
     | `comma of t list
     | `semi of t list
     | `seq of t list ]
@@ -32,8 +30,6 @@ module Shape = struct
   let prefix x y : t = `prefix (x, y)
   let infix x y z : t = `infix (x, y, z)
   let postfix x y : t = `postfix (x, y)
-  let colon x y : t = `colon (x, y)
-  let label x y : t = `label (x, y)
   let comma x : t = `comma x
   let semi x : t = `semi x
   let seq x : t = `seq x
@@ -44,16 +40,13 @@ module Shape = struct
     | `op x -> Fmt.pf f "%s" x
     | `int x -> Fmt.pf f "%d" x
     | `str x -> Fmt.pf f "%S" x
-    | `char x -> Fmt.pf f "%c" x
-    | `parens x -> Fmt.pf f "@[<hv2>(parens@ %a@])" pp x
-    | `brackets x -> Fmt.pf f "@[<hv2>(brackets@ %a@])" pp x
-    | `braces x -> Fmt.pf f "@[<hv2>(braces@ %a@])" pp x
-    | `prefix (fix, x) -> Fmt.pf f "@[<hv2>(prefix@ %s@ %a)@]" fix pp x
-    | `infix (fix, x, y) ->
-        Fmt.pf f "@[<hv2>(infix@ %s@ %a@ %a)@]" fix pp x pp y
-    | `postfix (fix, x) -> Fmt.pf f "@[<hv2>(postfix@ %s@ %a)@]" fix pp x
-    | `colon (x, y) -> Fmt.pf f "(: %a %a)" pp x pp y
-    | `label (x, y) -> Fmt.pf f "(%s: %a)" x pp y
+    | `char x -> Fmt.pf f "%C" x
+    | `parens x -> Fmt.pf f "@[<hv2>((_)@ %a@])" pp x
+    | `brackets x -> Fmt.pf f "@[<hv2>([_]@ %a@])" pp x
+    | `braces x -> Fmt.pf f "@[<hv2>({_}@ %a@])" pp x
+    | `prefix (fix, x) -> Fmt.pf f "@[<hv2>(%s_@ %a)@]" fix pp x
+    | `infix (fix, x, y) -> Fmt.pf f "@[<hv2>(_%s_@ %a@ %a)@]" fix pp x pp y
+    | `postfix (fix, x) -> Fmt.pf f "@[<hv2>(_%s@ %a)@]" fix pp x
     | `comma xs -> Fmt.pf f "(, @[%a@])" (Fmt.list ~sep:Fmt.sp pp) xs
     | `semi xs -> Fmt.pf f "(; @[%a@])" (Fmt.list ~sep:Fmt.sp pp) xs
     | `seq xs -> Fmt.pf f "(_ @[%a@])" (Fmt.list ~sep:Fmt.sp pp) xs
