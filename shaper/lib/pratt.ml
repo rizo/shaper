@@ -204,31 +204,27 @@ let infix_unbalanced =
   (rule, 0)
 
 let infix_binary power tok f =
+  let lbp = abs power in
+  let rbp = if power < 0 then lbp - 1 else lbp in
   let rule left g l =
     let* () = consume tok l in
-    let* right = parse ~power g l in
+    let* right = parse ~power:rbp g l in
     Ok (f left right)
   in
-  (rule, power)
+  (rule, lbp)
 
 let infix_or_postfix power tok ~infix:mk_infix ~postfix:mk_postfix =
+  let lbp = abs power in
+  let rbp = if power < 0 then lbp - 1 else lbp in
   let rule left g l =
     let* () = consume tok l in
     let tok_right = Lexer.pick l in
     if Grammar.has_infix tok_right g then Ok (mk_postfix left)
     else
-      let* right = parse ~power g l in
+      let* right = parse ~power:rbp g l in
       Ok (mk_infix left right)
   in
-  (rule, power)
-
-let infix_right_binary power tok f =
-  let rule left g l =
-    let* () = consume tok l in
-    let* right = parse ~power:(power - 1) g l in
-    Ok (f left right)
-  in
-  (rule, power)
+  (rule, lbp)
 
 let prefix_unary ?power tok f =
   let rule g l =

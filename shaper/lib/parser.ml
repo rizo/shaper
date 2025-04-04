@@ -55,20 +55,35 @@ module Shape = struct
     | `seq xs -> Fmt.pf f "(_ @[%a@])" (Fmt.list ~sep:Fmt.sp pp) xs
 end
 
+(*
+  Operator precedence, also known as binding power, is defined as a number.
+
+  Higher numbers represent higher binding power.
+
+  The sign of the number controls associativity. Positive numbers have
+  left-to-right associativity, while negative numbers represent right-to-left
+  associativity. 
+
+  SEE: https://ocaml.org/manual/5.3/api/Ocaml_operators.html
+*)
 module Power = struct
   let semi = 10
   let comma = 20
   let colon = 25
 
-  (* TODO left/right *)
   let get str =
     match str with
-    | "=" -> 30
-    | "|" -> 40
-    | ":" -> 50
+    | "=" -> -30
+    | "|" -> -40
+    | ":" -> -50
     | "::" -> 55
-    | "->" -> 60
+    | "->" -> -60
     | "!" -> 60
+    | ":=" -> -60
+    | "<-" -> -60
+    | "&" | "&&" -> -70
+    | "||" -> -70
+    | "**" -> -80
     | _ -> (
         match str.[0] with
         | '=' -> 101
@@ -101,11 +116,10 @@ let infix (tok : Token.t) =
   | Semi -> Some (P.infix_seq_opt ~sep:(tok, Power.semi) Shape.semi)
   | Comma ->
       Some (P.infix_seq ~sep:(Token.eq tok) ~power:Power.comma Shape.comma)
-  | Op ":" -> Some (P.infix_right_binary 50 tok (Shape.infix ":"))
   | Op x ->
-      let prec = Power.get x in
+      let power = Power.get x in
       Some
-        (P.infix_or_postfix prec tok
+        (P.infix_or_postfix power tok
            ~infix:(fun a b -> Shape.infix x a b)
            ~postfix:(fun a -> Shape.postfix x a))
   | Eof -> Some P.eof
