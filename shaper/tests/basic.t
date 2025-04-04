@@ -74,19 +74,14 @@
   $ shaper <<< 'a: f x'
   (infix : a (_ f x))
 
-#  $ shaper <<< 'a: 1 b: 2 c: 3 d: 4'
-#  (_ (a: 1) (b: 2) (c: 3) (d: 4))
-
   $ shaper <<< '1 b: 2'
   (infix : (_ 1 b) 2)
-
-#  $ shaper <<< 'if a then: 1 else: if c then: 2 else: 3'
 
   $ shaper <<< 'calc (2 + 2): 4'
   (infix : (_ calc (parens (infix + 2 2))) 4)
 
-#  $ shaper <<< 'a:'
-#  (postfix : a)
+  $ shaper <<< 'a:'
+  (postfix : a)
 
   $ shaper <<< 'a + f 1: t'
   (infix : (infix + a (_ f 1)) t)
@@ -94,7 +89,8 @@
   $ shaper <<< 'a + f 1 : t1 : t2'
   (infix : (infix + a (_ f 1)) (infix : t1 t2))
  
-  $ shaper <<< 'select: a from: c where: b and: x'
+  $ shaper <<< 'a : 1 b : 2 c : 3 d : 4'
+  (infix : a (infix : (_ 1 b) (infix : (_ 2 c) (infix : (_ 3 d) 4))))
 
   $ shaper <<< 'a: 1 + b: 2'
   (infix : a (infix : (infix + 1 b) 2))
