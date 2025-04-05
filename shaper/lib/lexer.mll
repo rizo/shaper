@@ -52,6 +52,8 @@ rule read lexer = parse
   | ']' { Token.Rbracket }
   | ',' { Token.Comma }
   | ';' { Token.Semi }
+  | "..." { Token.Op "..." }
+  | ".." { Token.Op ".." }
   (*| '`' { Delim "`" }*)
   (*| '\'' { Delim "'" }*)
   | '"' {

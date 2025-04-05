@@ -34,6 +34,25 @@ module Shape = struct
   let semi x : t = `semi x
   let seq x : t = `seq x
 
+  let rec pp_sexp f (t : t) =
+    match t with
+    | `id x -> Fmt.pf f "%s" x
+    | `op x -> Fmt.pf f "%s" x
+    | `int x -> Fmt.pf f "%d" x
+    | `str x -> Fmt.pf f "%S" x
+    | `char x -> Fmt.pf f "%C" x
+    | `parens x -> Fmt.pf f "@[<hv2>((_)@ %a@])" pp_sexp x
+    | `brackets x -> Fmt.pf f "@[<hv2>([_]@ %a@])" pp_sexp x
+    | `braces x -> Fmt.pf f "@[<hv2>({_}@ %a@])" pp_sexp x
+    | `prefix (fix, x) -> Fmt.pf f "@[<hv2>(%s_@ %a)@]" fix pp_sexp x
+    | `infix (fix, x, y) ->
+        Fmt.pf f "@[<hv2>(_%s_@ %a@ %a)@]" fix pp_sexp x pp_sexp y
+    | `postfix (fix, x) -> Fmt.pf f "@[<hv2>(_%s@ %a)@]" fix pp_sexp x
+    | `comma xs -> Fmt.pf f "(, @[%a@])" (Fmt.list ~sep:Fmt.sp pp_sexp) xs
+    | `semi xs -> Fmt.pf f "(; @[%a@])" (Fmt.list ~sep:Fmt.sp pp_sexp) xs
+    | `seq [] -> Fmt.pf f "()"
+    | `seq xs -> Fmt.pf f "(_ @[%a@])" (Fmt.list ~sep:Fmt.sp pp_sexp) xs
+
   let rec pp f (t : t) =
     match t with
     | `id x -> Fmt.pf f "%s" x
@@ -41,15 +60,15 @@ module Shape = struct
     | `int x -> Fmt.pf f "%d" x
     | `str x -> Fmt.pf f "%S" x
     | `char x -> Fmt.pf f "%C" x
-    | `parens x -> Fmt.pf f "@[<hv2>((_)@ %a@])" pp x
-    | `brackets x -> Fmt.pf f "@[<hv2>([_]@ %a@])" pp x
-    | `braces x -> Fmt.pf f "@[<hv2>({_}@ %a@])" pp x
-    | `prefix (fix, x) -> Fmt.pf f "@[<hv2>(%s_@ %a)@]" fix pp x
-    | `infix (fix, x, y) -> Fmt.pf f "@[<hv2>(_%s_@ %a@ %a)@]" fix pp x pp y
-    | `postfix (fix, x) -> Fmt.pf f "@[<hv2>(_%s@ %a)@]" fix pp x
-    | `comma xs -> Fmt.pf f "(, @[%a@])" (Fmt.list ~sep:Fmt.sp pp) xs
-    | `semi xs -> Fmt.pf f "(; @[%a@])" (Fmt.list ~sep:Fmt.sp pp) xs
-    | `seq xs -> Fmt.pf f "(_ @[%a@])" (Fmt.list ~sep:Fmt.sp pp) xs
+    | `parens x -> Fmt.pf f "@[<hv2>(%a@])" pp x
+    | `brackets x -> Fmt.pf f "@[<hv2>[%a@]]" pp x
+    | `braces x -> Fmt.pf f "@[<hv2>{%a@]}" pp x
+    | `prefix (op, x) -> Fmt.pf f "@[<hv2>%s%a@]" op pp x
+    | `infix (op, x, y) -> Fmt.pf f "@[<hv2>%a@ %s@ %a@]" pp x op pp y
+    | `postfix (op, x) -> Fmt.pf f "@[<hv2>%a%s@]" pp x op
+    | `comma xs -> Fmt.pf f "@[%a@]" (Fmt.list ~sep:Fmt.comma pp) xs
+    | `semi xs -> Fmt.pf f "@[%a@]" (Fmt.list ~sep:Fmt.semi pp) xs
+    | `seq xs -> Fmt.pf f "@[%a@]" (Fmt.list ~sep:Fmt.sp pp) xs
 end
 
 (*
@@ -104,10 +123,24 @@ let prefix (tok : Token.t) =
   | Str x -> Some (P.const (Shape.str x))
   | Char x -> Some (P.const (Shape.char x))
   | Id x -> Some (P.const (Shape.id x))
+  (* FIXME *)
+  | Op ".." -> Some (P.const (Shape.op ".."))
   | Op x -> Some (P.prefix_unary tok (fun shape -> Shape.prefix x shape))
-  | Lparen -> Some (P.between Lparen Rparen Shape.parens)
-  | Lbrace -> Some (P.between Lbrace Rbrace Shape.braces)
-  | Lbracket -> Some (P.between Lbracket Rbracket Shape.brackets)
+  | Lparen ->
+      P.prefix_scope Lparen Rparen (function
+        | None -> Shape.parens (Shape.seq [])
+        | Some x -> Shape.parens x)
+      |> Option.some
+  | Lbrace ->
+      P.prefix_scope Lbrace Rbrace (function
+        | None -> Shape.braces (Shape.seq [])
+        | Some x -> Shape.braces x)
+      |> Option.some
+  | Lbracket ->
+      P.prefix_scope Lbracket Rbracket (function
+        | None -> Shape.brackets (Shape.seq [])
+        | Some x -> Shape.brackets x)
+      |> Option.some
   | _ -> None
 
 let infix (tok : Token.t) =

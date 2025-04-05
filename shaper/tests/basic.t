@@ -94,3 +94,22 @@
 
   $ shaper <<< 'a: 1 + b: 2'
   (infix : a (infix : (infix + 1 b) 2))
+
+Blocks:
+  $ shaper <<< '(1)'
+
+  $ shaper <<< '{}'
+
+  $ shaper <<< '[1, 2, 3]'
+
+Operator in prefix-position without arguments:
+  $ shaper <<< '@'
+
+  $ shaper <<< '.'
+  TODO
+
+  $ shaper <<< '..'
+  TODO
+
+  $ shaper <<< '...'
+  TODO
