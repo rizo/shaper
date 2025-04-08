@@ -1,0 +1,298 @@
+(; (_=_ (_ type t ([_] A)) ({_} ..))
+   (_=_ (_:_ (_ external perform) (_->_ (_ t ([_] A)) A)) "%perform")
+   (_:_ (_+=_ (_ type exn) Unhandled) (_->_ (_ t ([_] A)) exn))
+   (_ exception Continuation_already_resumed)
+   (_ do
+      ({_}
+        (; (_=_
+             (_ let printer)
+             (_ fn
+                ({_}
+                  (|_
+                    (_|_
+                      (_->_
+                        (_ Unhandled x)
+                        ({_}
+                          (; (_=_
+                               (_ let msg)
+                               (_ (_._ Printf sprintf)
+                                  "Stdlib.Effect.Unhandled(%s)"
+                                  ((_)
+                                    (_@@_
+                                      (_._
+                                        Printexc
+                                        string_of_extension_constructor)
+                                      (_ (_._ Obj repr) x)))))
+                             (_ Some msg))))
+                      (_->_ _ None))))))
+           (_ (_._ Printexc register_printer) printer))))
+   (_:_ (_+=_ (_ type t ([_] _)) Should_not_see_this__) (_ t ([_] unit)))
+   (_=_
+     (_ let _)
+     (_ (_._ Callback register_exception) "Effect.Unhandled"
+        ((_) (_ Unhandled Should_not_see_this__))))
+   (_=_
+     (_ let _)
+     (_ (_._ Callback register_exception)
+        "Effect.Continuation_already_resumed" Continuation_already_resumed))
+   (_ type stack ([_] (, A B)))
+   (_=_
+     (_:_
+       (_ external resume)
+       (_->_ (_ stack ([_] (, A B))) (_->_ ((_) (_->_ C A)) (_->_ C B))))
+     "%resume")
+   (_=_
+     (_:_
+       (_ external runstack)
+       (_->_ (_ stack ([_] (, A B))) (_->_ ((_) (_->_ C A)) (_->_ C B))))
+     "%runstack")
+   (_=_
+     (_ mod Deep)
+     ({_}
+       (; (_ type continuation ([_] (, A B))) (_ type last_fiber)
+          (@_
+            (; (_=_
+                 (_:_
+                   (_ noalloc external take_cont_noexc)
+                   (_->_
+                     (_ continuation ([_] (, A B)))
+                     (_ stack ([_] (, A B)))))
+                 "caml_continuation_use_noexc")
+               (_=_
+                 (_:_
+                   (_ external alloc_stack)
+                   (_->_
+                     ((_) (_->_ A B))
+                     (_->_
+                       ((_) (_->_ exn B))
+                       (_->_
+                         ((_)
+                           (_->_
+                             (_ t ([_] C))
+                             (_->_
+                               (_ continuation ([_] (, C B)))
+                               (_->_ last_fiber B))))
+                         (_ stack ([_] (, A B)))))))
+                 "caml_alloc_stack")
+               (_=_
+                 (_ let continue k v)
+                 (_ resume ((_) (_ take_cont_noexc k))
+                    ((_) (_->_ (_ fn x) x)) v))
+               (_=_
+                 (_ let discontinue k e)
+                 (_ resume ((_) (_ take_cont_noexc k))
+                    ((_) (_->_ (_ fn e) (_ raise e))) e))
+               (_=_
+                 (_ let discontinue_with_backtrace k e bt)
+                 (_ resume ((_) (_ take_cont_noexc k))
+                    ((_)
+                      (_->_
+                        (_ fn e)
+                        (_ (_._ Printexc raise_with_backtrace) e bt)))
+                    e))
+               (_=_
+                 (_ type handler ([_] (, A B)))
+                 ({_}
+                   (, (_:_ retc (_->_ A B)) (_:_ exnc (_->_ exn B))
+                      (_:_
+                        effc
+                        (_::_
+                          ([_] C)
+                          (_->_
+                            (_ t ([_] C))
+                            (_ option
+                               ([_] (_->_ (_ continuation ([_] (, C B))) B)))))))))
+               (_=_
+                 (_:_
+                   (_ external reperform)
+                   (_->_
+                     (_ t ([_] A))
+                     (_->_
+                       (_ continuation ([_] (, A B)))
+                       (_->_ last_fiber B))))
+                 "%reperform")
+               (_=_
+                 (_ let match_with comp arg handler)
+                 ({_}
+                   (; (_=_
+                        (_ let effc eff k last_fiber)
+                        (_ match ((_) (_ (_._ handler effc) eff))
+                           ({_}
+                             (|_
+                               (_|_
+                                 (_->_ (_ Some f) (_ f k))
+                                 (_->_ None (_ reperform eff k last_fiber)))))))
+                      (_=_
+                        (_ let s)
+                        (_ alloc_stack (_._ handler retc) (_._ handler exnc)
+                           effc))
+                      (_ runstack s comp arg))))
+               (_=_
+                 (_ type effect_handler ([_] A))
+                 ({_}
+                   (_:_
+                     effc
+                     (_::_
+                       ([_] B)
+                       (_->_
+                         (_ t ([_] B))
+                         (_ option
+                            ([_] (_->_ (_ continuation ([_] (, B A))) A))))))))
+               (_=_
+                 (_ let try_with comp arg handler)
+                 ({_}
+                   (; (_=_
+                        (_ let effc' eff k last_fiber)
+                        (_ match ((_) (_ (_._ handler effc) eff))
+                           ({_}
+                             (|_
+                               (_|_
+                                 (_->_ (_ Some f) (_ f k))
+                                 (_->_ None (_ reperform eff k last_fiber)))))))
+                      (_=_
+                        (_ let s)
+                        (_ alloc_stack ((_) (_->_ (_ fn x) x))
+                           ((_) (_->_ (_ fn e) (_ raise e))) effc'))
+                      (_ runstack s comp arg))))
+               (_=_
+                 (_:_
+                   (_ external get_callstack)
+                   (_->_
+                     (_ continuation ([_] (, A B)))
+                     (_->_ int (_._ Printexc raw_backtrace))))
+                 "caml_get_continuation_callstack"))))))
+   (_=_
+     (_ mod Shallow)
+     ({_}
+       (; (_ type continuation ([_] (, A B))) (_ type last_fiber)
+          (_=_
+            (_:_
+              (_ external alloc_stack)
+              (_->_
+                ((_) (_->_ A B))
+                (_->_
+                  ((_) (_->_ exn B))
+                  (_->_
+                    ((_)
+                      (_->_
+                        (_ t ([_] C))
+                        (_->_
+                          (_ continuation ([_] (, C B)))
+                          (_->_ last_fiber B))))
+                    (_ stack ([_] (, A B)))))))
+            "caml_alloc_stack")
+          (_=_
+            (_:_
+              (_ let fiber)
+              (_::_
+                (_ type ([_] (, a b)))
+                (_->_ ((_) (_->_ a b)) (_ continuation ([_] (, a b))))))
+            (_->_
+              (_ fn f)
+              ({_}
+                (; (_=_
+                     (_ mod M)
+                     ({_}
+                       (_:_
+                         (_+=_ (_ type t ([_] _)) Initial_setup__)
+                         (_ t ([_] a)))))
+                   (_ exception E ((_) (_ continuation ([_] (, a b)))))
+                   (_=_
+                     (_ let f' ((_) ()))
+                     (_ f ((_) (_ perform (_._ M Initial_setup__)))))
+                   (_=_ (_ let error _) (_ failwith "impossible"))
+                   (_=_
+                     (_ let effc eff k _last_fiber)
+                     (_ match eff
+                        ({_}
+                          (|_
+                            (_|_
+                              (_->_
+                                (_._ M Initial_setup__)
+                                (_ raise_notrace ((_) (_ E k))))
+                              (_->_ _ (_ error ((_) ()))))))))
+                   (_=_ (_ let s) (_ alloc_stack error error effc))
+                   (_ match ((_) (_ runstack s f' ((_) ())))
+                      ({_}
+                        (|_
+                          (_|_
+                            (_->_ (_ exception E k) k)
+                            (_->_ _ (_ error ((_) ())))))))))))
+          (_=_
+            (_ type handler ([_] (, A B)))
+            ({_}
+              (, (_:_ retc (_->_ A B)) (_:_ exnc (_->_ exn B))
+                 (_:_
+                   effc
+                   (_::_
+                     ([_] C)
+                     (_->_
+                       (_ t ([_] C))
+                       (_ option
+                          ([_] (_->_ (_ continuation ([_] (, C A))) B)))))))))
+          (@_
+            (; (_=_
+                 (_:_
+                   (_ noalloc external update_handler)
+                   (_->_
+                     (_ continuation ([_] (, A B)))
+                     (_->_
+                       ((_) (_->_ B C))
+                       (_->_
+                         ((_) (_->_ exn C))
+                         (_->_
+                           ((_)
+                             (_->_
+                               (_ t ([_] D))
+                               (_->_
+                                 (_ continuation ([_] (, D B)))
+                                 (_->_ last_fiber C))))
+                           (_ stack ([_] (, A C))))))))
+                 "caml_continuation_use_and_update_handler_noexc")
+               (_=_
+                 (_:_
+                   (_ external reperform)
+                   (_->_
+                     (_ t ([_] A))
+                     (_->_
+                       (_ continuation ([_] (, A B)))
+                       (_->_ last_fiber C))))
+                 "%reperform")
+               (_=_
+                 (_ let continue_gen k resume_fun v handler)
+                 ({_}
+                   (; (_=_
+                        (_ let effc eff k last_fiber)
+                        (_ match ((_) (_ (_._ handler effc) eff))
+                           ({_}
+                             (|_
+                               (_|_
+                                 (_->_ (_ Some f) (_ f k))
+                                 (_->_ None (_ reperform eff k last_fiber)))))))
+                      (_=_
+                        (_ let stack)
+                        (_ update_handler k (_._ handler retc)
+                           (_._ handler exnc) effc))
+                      (_ resume stack resume_fun v))))
+               (_=_
+                 (_ let continue_with k v handler)
+                 (_ continue_gen k ((_) (_->_ (_ fn x) x)) v handler))
+               (_=_
+                 (_ let discontinue_with k v handler)
+                 (_ continue_gen k ((_) (_->_ (_ fn e) (_ raise e))) v
+                    handler))
+               (_=_
+                 (_ let discontinue_with_backtrace k v bt handler)
+                 (_ continue_gen k
+                    ((_)
+                      (_->_
+                        (_ fn e)
+                        (_ (_._ Printexc raise_with_backtrace) e bt)))
+                    v handler))
+               (_=_
+                 (_:_
+                   (_ external get_callstack)
+                   (_->_
+                     (_ continuation ([_] (, A B)))
+                     (_->_ int (_._ Printexc raw_backtrace))))
+                 "caml_get_continuation_callstack")))))))

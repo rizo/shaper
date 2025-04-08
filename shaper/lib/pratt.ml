@@ -237,6 +237,17 @@ let infix_or_postfix power tok ~infix:mk_infix ~postfix:mk_postfix =
   in
   (rule, lbp)
 
+let prefix_or_const ?power tok ~prefix:mk_prefix ~const:mk_const =
+  let rule g l =
+    let* () = consume tok l in
+    let tok_right = Lexer.pick l in
+    if Grammar.has_infix tok_right g then Ok (mk_const tok)
+    else
+      let* x = parse ?power g l in
+      Ok (mk_prefix x)
+  in
+  rule
+
 let prefix_unary ?power tok f =
   let rule g l =
     let* () = consume tok l in

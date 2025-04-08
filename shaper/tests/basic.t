@@ -6,42 +6,45 @@
   a
 
   $ shaper <<< '-a'
-  (prefix - a)
+  (-_ a)
 
   $ shaper <<< '- a'
-  (prefix - a)
+  (-_ a)
 
   $ shaper <<< '1 + 1'
-  (infix + 1 1)
+  (_+_ 1 1)
 
   $ shaper <<< '1+1'
-  (infix + 1 1)
+  (_+_ 1 1)
 
   $ shaper <<< '1+ 1'
-  (infix + 1 1)
+  (_+_ 1 1)
 
   $ shaper <<< '1 +1'
-  (infix + 1 1)
+  (_+_ 1 1)
 
   $ shaper <<< 'a!'
-  (postfix ! a)
+  (_! a)
 
   $ shaper <<< 'a !'
-  (postfix ! a)
+  (_! a)
 
   $ shaper <<< '(a)'
-  (parens a)
+  ((_) a)
 
   $ shaper <<< '(-a)'
-  (parens (prefix - a))
+  ((_) (-_ a))
 
   $ shaper <<< '(a!)'
-  (parens (postfix ! a))
+  ((_) (_! a))
 
   $ shaper <<< '1 + 2 * 3'
-  (infix + 1 (infix * 2 3))
+  (_+_ 1 (_*_ 2 3))
 
   $ shaper <<< '1, 2'
+  (, 1 2)
+
+  $ shaper <<< '1, 2,'
   (, 1 2)
 
   $ shaper <<< '1, 2, 3'
@@ -49,6 +52,15 @@
 
   $ shaper <<< '1;'
   (; 1)
+
+  $ shaper <<< '{;}'
+  ({_} (;))
+
+  $ shaper <<< '; ; ;'
+  (; (;) (;))
+
+  $ shaper <<< '; 1; ; ;'
+  (; (_ (;) 1) (;))
 
   $ shaper <<< '1; 2; 3'
   (; 1 2 3)
@@ -63,53 +75,80 @@
   (_ a b c)
 
   $ shaper <<< 'a b + 1'
-  (infix + (_ a b) 1)
+  (_+_ (_ a b) 1)
 
   $ shaper <<< 'return: 1 + 2'
-  (infix : return (infix + 1 2))
+  (_:_ return (_+_ 1 2))
 
   $ shaper <<< 'a: 1'
-  (infix : a 1)
+  (_:_ a 1)
 
   $ shaper <<< 'a: f x'
-  (infix : a (_ f x))
+  (_:_ a (_ f x))
 
   $ shaper <<< '1 b: 2'
-  (infix : (_ 1 b) 2)
+  (_:_ (_ 1 b) 2)
 
   $ shaper <<< 'calc (2 + 2): 4'
-  (infix : (_ calc (parens (infix + 2 2))) 4)
+  (_:_ (_ calc ((_) (_+_ 2 2))) 4)
 
   $ shaper <<< 'a:'
-  (postfix : a)
+  (_: a)
 
   $ shaper <<< 'a + f 1: t'
-  (infix : (infix + a (_ f 1)) t)
+  (_:_ (_+_ a (_ f 1)) t)
 
   $ shaper <<< 'a + f 1 : t1 : t2'
-  (infix : (infix + a (_ f 1)) (infix : t1 t2))
+  (_:_ (_+_ a (_ f 1)) (_:_ t1 t2))
  
   $ shaper <<< 'a : 1 b : 2 c : 3 d : 4'
-  (infix : a (infix : (_ 1 b) (infix : (_ 2 c) (infix : (_ 3 d) 4))))
+  (_:_ a (_:_ (_ 1 b) (_:_ (_ 2 c) (_:_ (_ 3 d) 4))))
 
   $ shaper <<< 'a: 1 + b: 2'
-  (infix : a (infix : (infix + 1 b) 2))
+  (_:_ a (_:_ (_+_ 1 b) 2))
 
 Blocks:
   $ shaper <<< '(1)'
+  ((_) 1)
 
   $ shaper <<< '{}'
+  ({_} ())
 
   $ shaper <<< '[1, 2, 3]'
+  ([_] (, 1 2 3))
 
 Operator in prefix-position without arguments:
   $ shaper <<< '@'
+  @
+
+  $ shaper <<< '(+)'
+  ((_) +)
+
+  $ shaper <<< '(+, #, @, !, -)'
+  ((_) (, + # @ ! -))
 
   $ shaper <<< '.'
-  TODO
+  .
 
   $ shaper <<< '..'
-  TODO
+  ..
 
   $ shaper <<< '...'
-  TODO
+  ...
+
+Alternatives:
+  $ shaper <<< '{ a | b | c }'
+  ({_} (_|_ a (_|_ b c)))
+
+  $ shaper <<< '{ | a | b | c }'
+  ({_} (|_ (_|_ a (_|_ b c))))
+
+
+Arrows:
+  $ shaper <<< 'a -> b -> c -> d'
+  (_->_ a (_->_ b (_->_ c d)))
+
+Dots:
+  $ shaper <<< 'f a.b.c 1 2 3'
+  (_ f (_._ (_._ a b) c) 1 2 3)
+

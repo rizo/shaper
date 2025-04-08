@@ -1,2 +1,16 @@
 (cram
  (deps %{bin:shaper}))
+
+
+(rule
+ (deps Effect.fl)
+ (action
+  (with-stdout-to
+   Effect.fl.actual
+    (run %{bin:shaper} %{deps}))))
+
+
+(rule
+ (alias runtest)
+ (action
+  (diff Effect.fl.expected Effect.fl.actual)))

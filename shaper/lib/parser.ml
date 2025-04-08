@@ -48,7 +48,9 @@ module Shape = struct
     | `infix (fix, x, y) ->
         Fmt.pf f "@[<hv2>(_%s_@ %a@ %a)@]" fix pp_sexp x pp_sexp y
     | `postfix (fix, x) -> Fmt.pf f "@[<hv2>(_%s@ %a)@]" fix pp_sexp x
+    | `comma [] -> Fmt.pf f "(,)"
     | `comma xs -> Fmt.pf f "(, @[%a@])" (Fmt.list ~sep:Fmt.sp pp_sexp) xs
+    | `semi [] -> Fmt.pf f "(;)"
     | `semi xs -> Fmt.pf f "(; @[%a@])" (Fmt.list ~sep:Fmt.sp pp_sexp) xs
     | `seq [] -> Fmt.pf f "()"
     | `seq xs -> Fmt.pf f "(_ @[%a@])" (Fmt.list ~sep:Fmt.sp pp_sexp) xs
@@ -100,6 +102,7 @@ module Power = struct
     | "&" | "&&" -> -70
     | "||" -> -70
     | "**" -> -80
+    | "." -> 310
     | _ -> (
         match str.[0] with
         | '@' -> 100
@@ -112,10 +115,44 @@ module Power = struct
         | _ -> 100)
 
   let juxt = 300
-  let dot = 310
 end
 
 let ( let* ) = Result.bind
+
+let parse_prefix_op op g l =
+  Lexer.move l;
+  let tok_right = Lexer.pick l in
+  if G.has_infix tok_right g then Ok (Shape.op op)
+  else
+    let* x = P.parse g l in
+    Ok (Shape.prefix op x)
+
+let parse_infix_op op =
+  let power = Power.get op in
+  let lbp = abs power in
+  let rbp = if power < 0 then lbp - 1 else lbp in
+  let rule left g l =
+    Lexer.move l;
+    let tok_right = Lexer.pick l in
+    if G.has_infix tok_right g then Ok (Shape.postfix op left)
+    else
+      let* right = P.parse ~power:rbp g l in
+      Ok (Shape.infix op left right)
+  in
+  (rule, lbp)
+
+let parse_block tok1 tok2 mk_block =
+  let rule g l =
+    let* () = P.consume tok1 l in
+    if Lexer.pick l = tok2 then
+      let* () = P.consume tok2 l in
+      Ok (mk_block (Shape.seq []))
+    else
+      let* x = P.parse g l in
+      let* () = P.consume tok2 l in
+      Ok (mk_block x)
+  in
+  rule
 
 let prefix (tok : Token.t) =
   match tok with
@@ -123,38 +160,20 @@ let prefix (tok : Token.t) =
   | Str x -> Some (P.const (Shape.str x))
   | Char x -> Some (P.const (Shape.char x))
   | Id x -> Some (P.const (Shape.id x))
-  (* FIXME *)
-  | Op ".." -> Some (P.const (Shape.op ".."))
-  | Op x -> Some (P.prefix_unary tok (fun shape -> Shape.prefix x shape))
-  | Lparen ->
-      P.prefix_scope Lparen Rparen (function
-        | None -> Shape.parens (Shape.seq [])
-        | Some x -> Shape.parens x)
-      |> Option.some
-  | Lbrace ->
-      P.prefix_scope Lbrace Rbrace (function
-        | None -> Shape.braces (Shape.seq [])
-        | Some x -> Shape.braces x)
-      |> Option.some
-  | Lbracket ->
-      P.prefix_scope Lbracket Rbracket (function
-        | None -> Shape.brackets (Shape.seq [])
-        | Some x -> Shape.brackets x)
-      |> Option.some
+  | Op op -> Some (parse_prefix_op op)
+  | Lparen -> Some (parse_block Lparen Rparen Shape.parens)
+  | Lbrace -> Some (parse_block Lbrace Rbrace Shape.braces)
+  | Lbracket -> Some (parse_block Lbracket Rbracket Shape.brackets)
+  | Semi -> Some (P.const (Shape.semi []))
+  | Comma -> Some (P.const (Shape.comma []))
   | _ -> None
 
 let infix (tok : Token.t) =
   match tok with
   | Rparen | Rbrace | Rbracket -> Some P.infix_unbalanced
   | Semi -> Some (P.infix_seq_opt ~sep:(tok, Power.semi) Shape.semi)
-  | Comma ->
-      Some (P.infix_seq ~sep:(Token.eq tok) ~power:Power.comma Shape.comma)
-  | Op x ->
-      let power = Power.get x in
-      Some
-        (P.infix_or_postfix power tok
-           ~infix:(fun a b -> Shape.infix x a b)
-           ~postfix:(fun a -> Shape.postfix x a))
+  | Comma -> Some (P.infix_seq_opt ~sep:(tok, Power.comma) Shape.comma)
+  | Op op -> Some (parse_infix_op op)
   | Eof -> Some P.eof
   | _ -> None
 
